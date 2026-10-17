@@ -1,0 +1,408 @@
+<title>7-11 專案進度看板</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* 版面：手機優先的單欄，由上而下回答「走到哪 → 卡什麼 → 每個商品細節」；冰原淡藍底，燈號是唯一的強色 */
+:root {
+  --bg: #eef3f6;
+  --surface: #ffffff;
+  --ink: #1f2d3a;
+  --muted: #66788a;
+  --line: #d9e3ea;
+  --soft: #f5f8fa;
+  --accent: #2f6f9f;
+  --red: #d8584f;   --red-bg: #fbe7e5;
+  --amber: #d99a1e; --amber-bg: #fdf1d8;
+  --green: #4f9a6b; --green-bg: #e3f2e8;
+  --blue: #4a86c5;  --blue-bg: #e4eef8;
+  --todo: #c4d0da;
+  --font-body: "Noto Sans TC", "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif;
+  --font-num: "Archivo", "Noto Sans TC", "PingFang TC", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121a21; --surface: #1a242d; --ink: #e3ebf1; --muted: #93a4b3; --line: #2b3843; --soft: #202c36; --accent: #7fb3dc;
+    --red: #ec7b72; --red-bg: #3a2322; --amber: #e7b04a; --amber-bg: #3a3020; --green: #74bf8f; --green-bg: #1f3428;
+    --blue: #7fb0e3; --blue-bg: #1f2e3e; --todo: #4a5866; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121a21; --surface: #1a242d; --ink: #e3ebf1; --muted: #93a4b3; --line: #2b3843; --soft: #202c36; --accent: #7fb3dc;
+  --red: #ec7b72; --red-bg: #3a2322; --amber: #e7b04a; --amber-bg: #3a3020; --green: #74bf8f; --green-bg: #1f3428;
+  --blue: #7fb0e3; --blue-bg: #1f2e3e; --todo: #4a5866; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.55; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 940px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+h1, h2 { margin: 0; text-wrap: balance; font-weight: 700; }
+h2 { font-size: 15px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+h2 small { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font-size: 11px; letter-spacing: .08em; color: var(--muted); }
+.top h1 { font-size: 20px; }
+.updated { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.reload { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 2px 10px; cursor: pointer; }
+.notice { font-size: 13px; background: var(--surface); border-radius: 12px; padding: 14px 16px; color: var(--muted); }
+.notice.error { color: var(--red); }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.tab[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab:focus-visible, .reload:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.hero { background: var(--surface); border-radius: 14px; padding: 16px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; }
+.hero .code { font-family: var(--font-num); font-size: 12px; color: var(--muted); letter-spacing: .06em; }
+.hero .name { font-size: 18px; font-weight: 700; }
+.hero .dates { color: var(--muted); font-size: 13px; }
+.count { text-align: right; }
+.count b { font-family: var(--font-num); font-size: 34px; font-weight: 600; line-height: 1; }
+.count span { display: block; font-size: 12px; color: var(--muted); }
+.pills { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--soft); }
+.pill b { font-family: var(--font-num); font-size: 14px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.red { background: var(--red); } .amber { background: var(--amber); } .green { background: var(--green); } .blue { background: var(--blue); }
+
+.stages { display: grid; grid-template-columns: repeat(8, minmax(0,1fr)); gap: 6px; }
+.stage { background: var(--surface); border-radius: 10px; padding: 9px 8px; display: flex; flex-direction: column; gap: 3px; border-top: 3px solid var(--todo); }
+.stage.is-red { border-top-color: var(--red); } .stage.is-amber { border-top-color: var(--amber); } .stage.is-green { border-top-color: var(--green); }
+.stage .label { font-size: 12px; color: var(--muted); }
+.stage .label i { font-style: normal; font-family: var(--font-num); margin-right: 2px; }
+.stage .val { font-family: var(--font-num); font-size: 17px; font-weight: 600; }
+.stage .val small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.stage .note { font-size: 11px; color: var(--muted); }
+.stage.is-red .note { color: var(--red); } .stage.is-amber .note { color: var(--amber); }
+.bar { height: 4px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--green); }
+
+.section { display: flex; flex-direction: column; gap: 10px; }
+.groups { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+.group { background: var(--surface); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.group header { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 13px; }
+.group header span { font-family: var(--font-num); color: var(--muted); font-weight: 500; }
+.issue { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-top: 1px solid var(--line); }
+.issue .what { min-width: 0; }
+.issue .what div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.issue .what small { color: var(--muted); font-size: 12px; }
+.pcode { font-family: var(--font-num); color: var(--muted); font-size: 12px; margin-right: 4px; }
+.issue .when { font-family: var(--font-num); font-size: 12px; white-space: nowrap; }
+.issue .when.late { color: var(--red); font-weight: 600; }
+.issue .when.warn { color: var(--amber); font-weight: 600; }
+.empty { font-size: 12px; color: var(--muted); padding: 6px 0; border-top: 1px solid var(--line); }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.tablebox { background: var(--surface); border-radius: 12px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { font-weight: 500; font-size: 11px; color: var(--muted); padding: 8px 2px; text-align: center; white-space: nowrap; }
+th:first-child { text-align: left; padding-left: 12px; }
+td { padding: 7px 2px; border-top: 1px solid var(--line); text-align: center; }
+td:first-child { text-align: left; padding-left: 12px; max-width: 0; width: 42%; }
+tr.row { cursor: pointer; }
+tr.row:hover td { background: var(--soft); }
+tr.row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pname { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src { font-size: 11px; color: var(--muted); }
+.cell { display: inline-block; width: 16px; height: 16px; border-radius: 5px; vertical-align: middle; }
+.c-done { background: var(--green); }
+.c-late { background: var(--red); }
+.c-warn { background: var(--amber); }
+.c-doing { background: var(--blue-bg); box-shadow: inset 0 0 0 2px var(--blue); }
+.c-todo { box-shadow: inset 0 0 0 1.5px var(--todo); }
+.c-na { width: 8px; height: 2px; border-radius: 2px; background: var(--todo); }
+tr.detail td { background: var(--soft); padding: 10px 12px; text-align: left; }
+.dlist { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px 12px; font-size: 12px; }
+.dlist div { display: flex; flex-direction: column; }
+.dlist b { font-weight: 500; }
+.dlist span { color: var(--muted); font-family: var(--font-num); }
+.dlist .late { color: var(--red); } .dlist .warn { color: var(--amber); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+footer { font-size: 12px; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .stages { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .groups { grid-template-columns: minmax(0,1fr); }
+  .dlist { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  th.stage-h { font-size: 10px; }
+}
+@media (max-width: 420px) {
+  td:first-child { width: 38%; }
+  .cell { width: 14px; height: 14px; }
+}
+@media (prefers-reduced-motion: no-preference) { tr.row td { transition: background .15s; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="eyebrow">我適文創・7-ELEVEN 檔期</div>
+      <h1>專案進度看板</h1>
+    </div>
+    <div class="updated">讀取時間 <span class="num" id="updated">—</span>
+      <button class="reload" type="button" id="reload">重新整理</button></div>
+  </div>
+
+  <div class="tabs" id="tabs" role="group" aria-label="切換專案"></div>
+
+  <div class="notice" id="notice">正在讀取專案資料…</div>
+
+  <div id="board" hidden>
+    <div class="wrap" style="max-width:none">
+      <section class="hero" aria-label="專案摘要">
+        <div>
+          <div class="code" id="pcode"></div>
+          <div class="name" id="pname"></div>
+          <div class="dates">入倉 <span class="num" id="dIn"></span>・上架 <span class="num" id="dOn"></span>・<span class="num" id="total"></span> 款商品</div>
+        </div>
+        <div class="count"><b id="days"></b><span id="daysLabel">天後入倉</span></div>
+        <div class="pills" id="pills"></div>
+      </section>
+
+      <section class="section" aria-labelledby="h-stage">
+        <h2 id="h-stage">各關卡進度 <small>完成數／需要這一關的商品數</small></h2>
+        <div class="stages" id="stages"></div>
+      </section>
+
+      <section class="section" aria-labelledby="h-issue">
+        <h2 id="h-issue">需要處理 <small>依負責功能分組，最嚴重的排最上面</small></h2>
+        <div class="groups" id="groups"></div>
+      </section>
+
+      <section class="section" aria-labelledby="h-table">
+        <h2 id="h-table">商品進度 <small>點商品看每一關的期限</small></h2>
+        <div class="filters" role="group" aria-label="篩選商品">
+          <button class="tab" type="button" data-f="all" aria-pressed="true">全部</button>
+          <button class="tab" type="button" data-f="issue" aria-pressed="false">需要處理</button>
+          <button class="tab" type="button" data-f="自製" aria-pressed="false">自製</button>
+          <button class="tab" type="button" data-f="外購" aria-pressed="false">外購</button>
+        </div>
+        <div class="tablebox">
+          <table>
+            <thead><tr id="thead"></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="legend">
+          <span><i class="cell c-done"></i>完成</span>
+          <span><i class="cell c-doing"></i>進行中／等回覆</span>
+          <span><i class="cell c-warn"></i>該開始或快到期</span>
+          <span><i class="cell c-late"></i>逾期</span>
+          <span><i class="cell c-todo"></i>還沒輪到</span>
+          <span><i class="cell c-na"></i>不需要</span>
+        </div>
+      </section>
+
+      <footer>燈號規則：過了期限亮紅燈；前一關已過期限、這關卻還沒開始，或 3 天內到期，亮黃燈。期限由入倉日往回推算。資料來源：各專案進度表，試算表更新後約 5 分鐘反映在這裡。</footer>
+    </div>
+  </div>
+</div>
+
+<script>
+// 專案總表（發布到網路的 CSV）。新增專案只要在總表加一列，不用改這個檔案。
+const INDEX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTx1t_XgVo_qVIQbVGtWT75SsF8-hKhHybgJD0iAE9MLxbtzQNr0HHvDlrnYD5GWgTnLRdpQNfBQ30q/pub?gid=231791528&single=true&output=csv";
+
+const STAGES = ["圖審","打樣","樣審","採購","生產","檢驗","到貨","出貨入倉"];
+const OWNER  = ["設計","採購／生產","設計","採購／生產","採購／生產","採購／生產","採購／生產","PM"];
+const GROUPS = ["設計","採購／生產","PM"];
+const DAY = 86400000;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// 讀 CSV（處理引號裡的逗號和換行）
+function parseCSV(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') q = false;
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (c !== "\r") cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  const head = rows.shift() || [];
+  return rows.map(r => Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] ?? "").trim()])));
+}
+async function getCSV(url) {
+  const res = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(), { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return parseCSV(await res.text());
+}
+
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const toDate = s => s ? new Date(s + "T00:00:00") : null;
+const diff = (a, b) => Math.round((a - b) / DAY);
+const md = d => `${d.getMonth() + 1}/${d.getDate()}`;
+
+// 和試算表同一套燈號規則，但用「看的人今天的日期」重算
+function analyse(r, code) {
+  const now = today();
+  const dl = STAGES.map(s => toDate(r[s + "期限"]));
+  const st = STAGES.map(s => r[s] || "未開始");
+  const done = i => st[i] === "完成" || st[i] === "不需要" || !dl[i];
+  const cur = STAGES.findIndex((_, i) => !done(i));
+  let prev = null;
+  const cells = STAGES.map((s, i) => {
+    const d = dl[i];
+    let kind;
+    if (!d || st[i] === "不需要") kind = "na";
+    else if (st[i] === "完成") kind = "done";
+    else if (diff(now, d) > 0) kind = "late";
+    else if (i === cur && st[i] === "未開始" && prev && now > prev) kind = "warn";
+    else if (i === cur && diff(d, now) <= 3) kind = "warn";
+    else if (st[i] === "進行中" || st[i] === "等回覆") kind = "doing";
+    else kind = "todo";
+    if (d) prev = d;
+    return { stage: s, status: kind === "na" ? "不需要" : st[i], due: d, kind };
+  });
+  let level = "ok", note = "", sort = 0;
+  if (cur === -1) { level = "done"; note = "全部完成"; }
+  else {
+    const c = cells[cur], d = c.due;
+    if (c.kind === "late") { level = "late"; note = `逾期 ${diff(now, d)} 天`; sort = 1000 + diff(now, d); }
+    else if (c.kind === "warn") {
+      level = "warn";
+      note = c.status === "未開始" && diff(d, now) > 3 ? `該開始了・${md(d)} 前` : `${md(d)} 前`;
+      sort = 100 + (30 - diff(d, now));
+    } else note = `${md(d)} 前`;
+  }
+  const num = (r["商品編號"] || "").replace(/^P/i, "");
+  return {
+    id: `${code}-${num}`,
+    name: (r["品名"] || "").replace(/^【[^】]*】/, ""),
+    src: r["來源"], cells, cur, level, note, sort
+  };
+}
+
+let projects = [], current = null, products = [], filter = "all", open = null;
+
+async function loadIndex() {
+  const list = await getCSV(INDEX_URL);
+  projects = list.filter(p => p["狀態"] === "進行中" && /^https?:/.test(p["公開資料網址"] || ""))
+    .map(p => ({ code: p["代號"], icon: p["圖示"], name: p["檔期名稱"], url: p["公開資料網址"] }));
+  if (!projects.length) throw new Error("專案總表裡沒有「進行中」的專案");
+  const want = location.hash.replace("#", "").toUpperCase();
+  current = projects.find(p => p.code === want) || projects[0];
+  $("tabs").innerHTML = projects.map(p =>
+    `<button class="tab" type="button" data-code="${esc(p.code)}" aria-pressed="${p === current}">${esc(p.icon)} ${esc(p.name.replace(/^7-11\s*/, ""))}</button>`).join("");
+}
+
+async function loadProject() {
+  $("notice").hidden = false; $("notice").className = "notice"; $("notice").textContent = `正在讀取 ${current.icon} ${current.name}…`;
+  const rows = (await getCSV(current.url)).filter(r => r["商品編號"]);
+  products = rows.map(r => analyse(r, current.code));
+  const first = rows[0] || {};
+  const dIn = toDate(first["入倉日"]), dOn = toDate(first["上架日"]);
+  $("pcode").textContent = `${current.icon} ${current.code}`;
+  $("pname").textContent = first["檔期名稱"] || current.name;
+  $("dIn").textContent = dIn ? md(dIn) : "—";
+  $("dOn").textContent = dOn ? md(dOn) : "—";
+  $("total").textContent = products.length;
+  const left = dIn ? diff(dIn, today()) : null;
+  $("days").textContent = left === null ? "—" : Math.abs(left);
+  $("daysLabel").textContent = left !== null && left < 0 ? "天前已入倉" : "天後入倉";
+  const now = new Date();
+  $("updated").textContent = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  open = null;
+  renderAll();
+  $("notice").hidden = true; $("board").hidden = false;
+}
+
+function renderAll() {
+  const count = lv => products.filter(p => p.level === lv).length;
+  $("pills").innerHTML = [
+    ["red", "逾期", count("late")], ["amber", "要注意", count("warn")], ["green", "正常", count("ok")], ["blue", "全部完成", count("done")]
+  ].map(([c, t, n]) => `<span class="pill"><i class="dot ${c}"></i>${t} <b>${n}</b></span>`).join("");
+
+  $("stages").innerHTML = STAGES.map((s, i) => {
+    const items = products.map(p => p.cells[i]).filter(c => c.kind !== "na");
+    const done = items.filter(c => c.kind === "done").length;
+    const late = items.filter(c => c.kind === "late").length;
+    const warn = items.filter(c => c.kind === "warn").length;
+    const cls = late ? "is-red" : warn ? "is-amber" : done === items.length && items.length ? "is-green" : "";
+    const note = !items.length ? "沒有商品需要" : late ? `${late} 款逾期` : warn ? `${warn} 款要注意` : done === items.length ? "完成" : "尚未到期";
+    const pct = items.length ? Math.round(done / items.length * 100) : 0;
+    return `<div class="stage ${cls}"><div class="label"><i>${i + 1}</i>${s}</div>
+      <div class="val">${done}<small>／${items.length}</small></div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+      <div class="note">${note}</div></div>`;
+  }).join("");
+
+  $("groups").innerHTML = GROUPS.map(g => {
+    const list = products.filter(p => (p.level === "late" || p.level === "warn") && OWNER[p.cur] === g).sort((a, b) => b.sort - a.sort);
+    const rows = list.length ? list.map(p => {
+      const c = p.cells[p.cur];
+      return `<div class="issue"><i class="dot ${p.level === "late" ? "red" : "amber"}"></i>
+        <div class="what"><div><span class="pcode">${esc(p.id)}</span>${esc(p.name)}</div><small>${c.stage}・${esc(c.status)}</small></div>
+        <div class="when ${p.level === "late" ? "late" : "warn"}">${p.note}</div></div>`;
+    }).join("") : `<div class="empty">目前沒有需要處理的事</div>`;
+    return `<div class="group"><header>${g}<span>${list.length}</span></header>${rows}</div>`;
+  }).join("");
+
+  $("thead").innerHTML = `<th scope="col">商品</th>` + STAGES.map(s => `<th scope="col" class="stage-h" title="${s}">${s.slice(0, 2)}</th>`).join("");
+  renderTable();
+}
+
+function renderTable() {
+  const rows = products
+    .filter(p => filter === "all" || (filter === "issue" ? (p.level === "late" || p.level === "warn") : p.src === filter))
+    .slice().sort((a, b) => b.sort - a.sort);
+  $("tbody").innerHTML = rows.map(p => {
+    const idx = products.indexOf(p);
+    const cells = p.cells.map(c => `<td><i class="cell c-${c.kind}" title="${c.stage}：${esc(c.status)}${c.due ? "，" + md(c.due) + " 前" : ""}"></i></td>`).join("");
+    const detail = open === idx ? `<tr class="detail"><td colspan="9"><div class="dlist">${p.cells.map(c =>
+      `<div><b>${c.stage}</b><span class="${c.kind === "late" ? "late" : c.kind === "warn" ? "warn" : ""}">${esc(c.status)}${c.due ? "・" + md(c.due) + " 前" : ""}</span></div>`).join("")}</div></td></tr>` : "";
+    return `<tr class="row" tabindex="0" data-i="${idx}" aria-expanded="${open === idx}">
+      <td><span class="pname"><span class="pcode">${esc(p.id)}</span>${esc(p.name)}</span><span class="src">${esc(p.src)}${p.note ? "・" + p.note : ""}</span></td>${cells}</tr>${detail}`;
+  }).join("") || `<tr><td colspan="9" class="src" style="padding:14px 12px">沒有符合的商品</td></tr>`;
+}
+
+$("tbody").addEventListener("click", e => {
+  const tr = e.target.closest("tr.row"); if (!tr) return;
+  const i = +tr.dataset.i; open = open === i ? null : i; renderTable();
+});
+$("tbody").addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr.row")) { e.preventDefault(); e.target.click(); }
+});
+document.querySelector(".filters").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f; open = null;
+  document.querySelectorAll(".filters .tab").forEach(t => t.setAttribute("aria-pressed", t === b));
+  renderTable();
+});
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-code]"); if (!b) return;
+  current = projects.find(p => p.code === b.dataset.code);
+  document.querySelectorAll("#tabs .tab").forEach(t => t.setAttribute("aria-pressed", t === b));
+  try { history.replaceState(null, "", "#" + current.code); } catch (_) {}
+  load(false);
+});
+$("reload").addEventListener("click", () => load(true));
+
+async function load(withIndex) {
+  try {
+    if (withIndex || !projects.length) await loadIndex();
+    await loadProject();
+  } catch (err) {
+    $("board").hidden = true;
+    $("notice").hidden = false;
+    $("notice").className = "notice error";
+    $("notice").textContent = "讀不到專案資料。請確認網路連線，或稍後按「重新整理」再試一次。（" + err.message + "）";
+  }
+}
+load(true);
+</script>
